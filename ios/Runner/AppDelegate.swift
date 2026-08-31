@@ -3,7 +3,6 @@ import Flutter
 import FirebaseCore
 import GoogleMaps
 import FirebaseAuth
-import awesome_notifications
 import FirebaseMessaging
 //import shared_preferences_ios
 
@@ -16,17 +15,10 @@ import FirebaseMessaging
     GMSServices.provideAPIKey("PLACE_YOUR_IOS_MAP_ID")
 
     GeneratedPluginRegistrant.register(with: self)
-      
-      SwiftAwesomeNotificationsPlugin.setPluginRegistrantCallback { registry in
-               SwiftAwesomeNotificationsPlugin.register(
-                 with: registry.registrar(forPlugin: "io.flutter.plugins.awesomenotifications.AwesomeNotificationsPlugin")!)
-           }
 
-
-      
-      if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
+    if FirebaseApp.app() == nil {
+        FirebaseApp.configure()
+    }
     //GADMobileAds.sharedInstance().requestConfiguration.setSameAppKeyEnabled(false)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
