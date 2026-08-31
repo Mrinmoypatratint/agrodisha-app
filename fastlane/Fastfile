@@ -1,0 +1,63 @@
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    # Ensure UTF-8 encoding
+    ENV["LANG"] = "en_US.UTF-8"
+    ENV["LANGUAGE"] = "en_US:en"
+    ENV["LC_ALL"] = "en_US.UTF-8"
+  end
+
+  desc "Build and upload beta build to TestFlight"
+  lane :beta do
+    # Configure App Store Connect API Key authentication
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+
+    # Disable SPM to enforce CocoaPods compatibility across all Flutter plugins
+    sh("flutter config --no-enable-swift-package-manager")
+
+    # Clean and fetch dependencies
+    sh("flutter clean")
+    sh("flutter precache --ios")
+    sh("flutter pub get")
+
+    # Build release IPA
+    sh("flutter build ipa --release")
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Build and upload production release to App Store Connect"
+  lane :release do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+
+    sh("flutter config --no-enable-swift-package-manager")
+    sh("flutter clean")
+    sh("flutter precache --ios")
+    sh("flutter pub get")
+    sh("flutter build ipa --release")
+
+    upload_to_app_store(
+      api_key: api_key,
+      skip_metadata: true,
+      skip_screenshots: true,
+      force: true
+    )
+  end
+end
