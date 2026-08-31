@@ -1,0 +1,41 @@
+workflows:
+  ios-release:
+    name: iOS App Store Release
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - app_store_credentials # Set this group up in Codemagic UI with your App Store Connect API Key
+      vars:
+        BUNDLE_ID: "com.agrohisha.app"
+    scripts:
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install CocoaPods
+        script: |
+          cd ios && pod install --repo-update
+      - name: Build iOS IPA
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - user@example.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true # Automatically delivers to TestFlight for client testing
+        submit_to_app_store: false  # Set to true only when ready for automatic App Store review submission

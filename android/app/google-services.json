@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "827090007541",
+    "project_id": "agro-bs-f0273",
+    "storage_bucket": "agro-bs-f0273.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:827090007541:android:4672694cec89f329191cbc",
+        "android_client_info": {
+          "package_name": "com.agrohisha.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "827090007541-qn62nlin2ag3o705vabfn4l7o54p7sfa.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.agrohisha.app",
+            "certificate_hash": "e383e517dd2d43ae299c7632143da4f44445ba39"
+          }
+        },
+        {
+          "client_id": "827090007541-r6mjb8e5f02abdp5g00e5e24rmpe4ctr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfnA8I67njl9NAGj_xB9oE-BjKy5gCeMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "827090007541-r6mjb8e5f02abdp5g00e5e24rmpe4ctr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
