@@ -14,6 +14,9 @@ workflows:
       - name: Precache iOS artifacts
         script: |
           flutter precache --ios
+      - name: Clean build cache
+        script: |
+          flutter clean
       - name: Get Flutter packages
         script: |
           flutter pub get
@@ -46,6 +49,9 @@ workflows:
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
+      - name: Clean build cache
+        script: |
+          flutter clean
       - name: Get Flutter packages
         script: |
           flutter pub get
