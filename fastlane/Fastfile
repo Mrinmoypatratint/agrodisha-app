@@ -43,7 +43,7 @@ platform :ios do
     # Fetch or create distribution certificate and install into CI keychain
     get_certificates(
       api_key: api_key,
-      keychain_name: "ci_keychain",
+      keychain_path: File.expand_path("~/Library/Keychains/ci_keychain-db"),
       keychain_password: "temporary_ci_password_123"
     )
 
