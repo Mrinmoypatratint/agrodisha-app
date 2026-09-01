@@ -1,26 +1,21 @@
-name: iOS Build and Deploy
+name: iOS Build and Release
 
 on:
   workflow_dispatch:
     inputs:
       lane:
-        description: 'Fastlane lane to execute (beta or release)'
+        description: 'Fastlane lane to execute'
         required: true
-        default: 'beta'
+        default: 'build_ios'
         type: choice
         options:
-          - beta
-          - release
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'README.md'
-      - '.gitignore'
+          - build_ios   # Phase 13: Build & Sign IPA for CI validation (no upload)
+          - beta        # Phase 15: Build, Sign & Upload directly to TestFlight
+          - release     # Phase 20: Build, Sign & Upload to App Store Connect
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy iOS
+  build-ios:
+    name: Build iOS App
     runs-on: macos-14
     timeout-minutes: 60
 
@@ -40,28 +35,35 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Verify Flutter version
+        run: |
+          flutter --version
+
       - name: Set up Ruby and Bundler
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
+          bundler-cache: true
 
-      - name: Install Fastlane
+      - name: Install dependencies via Bundler
         run: |
-          gem install fastlane --no-document
+          bundle install
 
-      - name: Run Fastlane
+      - name: Execute Fastlane
         env:
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APP_STORE_TEAM_ID: ${{ secrets.APP_STORE_TEAM_ID }}
         run: |
-          LANE="${{ github.event.inputs.lane || 'beta' }}"
-          bundle exec fastlane ios $LANE || fastlane ios $LANE
+          LANE="${{ github.event.inputs.lane || 'build_ios' }}"
+          echo "Executing Fastlane lane: $LANE"
+          bundle exec fastlane ios $LANE
 
-      - name: Upload IPA artifact
+      - name: Upload IPA Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
