@@ -48,9 +48,19 @@ platform :ios do
     )
 
     # Fetch or create App Store provisioning profile for com.agrohisha.app
-    get_provisioning_profile(
+    profile = get_provisioning_profile(
       api_key: api_key,
       app_identifier: "com.agrohisha.app"
+    )
+
+    # Configure Xcode project for manual signing in CI
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "ios/Runner.xcodeproj",
+      team_id: "2BSV4VG5A7",
+      bundle_identifier: "com.agrohisha.app",
+      profile_name: lane_context[SharedValues::SIGH_NAME],
+      code_sign_identity: "iPhone Distribution"
     )
 
     # Disable SPM to ensure CocoaPods compatibility
@@ -74,8 +84,30 @@ platform :ios do
       UI.message("Could not fetch remote build number (first build or pending record): #{ex.message}. Using build number #{current_build}")
     end
 
-    # Build production signed IPA
-    sh("flutter build ipa --release --build-name=2.0.0 --build-number=#{current_build}")
+    # Generate ExportOptions.plist for flutter build ipa
+    export_options_path = File.expand_path("../ios/ExportOptions.plist")
+    File.write(export_options_path, <<~PLIST)
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>method</key>
+        <string>app-store</string>
+        <key>teamID</key>
+        <string>2BSV4VG5A7</string>
+        <key>signingStyle</key>
+        <string>manual</string>
+        <key>provisioningProfiles</key>
+        <dict>
+          <key>com.agrohisha.app</key>
+          <string>#{lane_context[SharedValues::SIGH_NAME]}</string>
+        </dict>
+      </dict>
+      </plist>
+    PLIST
+
+    # Build production signed IPA with explicit export options
+    sh("flutter build ipa --release --build-name=2.0.0 --build-number=#{current_build} --export-options-plist=#{export_options_path}")
 
     cleanup_ci_keychain
   end
