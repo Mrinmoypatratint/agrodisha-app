@@ -44,6 +44,7 @@ post_install do |installer|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
       #config.build_settings['ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = ''
+      config.build_settings['SWIFT_VERSION'] = '5.0'
     end
   end
 end
