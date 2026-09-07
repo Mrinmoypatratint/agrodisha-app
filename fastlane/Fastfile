@@ -112,6 +112,12 @@ platform :ios do
     # Build production signed IPA with explicit export options
     sh("flutter build ipa --release --build-name=2.0.0 --build-number=#{current_build} --export-options-plist=#{export_options_path}")
 
+    repo_root = File.expand_path("..", __dir__)
+    ipa_path = Dir[File.join(repo_root, "build/ios/ipa/*.ipa")].first || Dir["build/ios/ipa/*.ipa"].first
+    UI.message("Resolved generated IPA path: #{ipa_path}")
+    lane_context[SharedValues::IPA_OUTPUT_PATH] = ipa_path
+    ENV["DELIVER_IPA_PATH"] = ipa_path
+
     cleanup_ci_keychain
   end
 
@@ -120,9 +126,13 @@ platform :ios do
     build_ios
 
     api_key = load_api_key
+    repo_root = File.expand_path("..", __dir__)
+    ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH] || Dir[File.join(repo_root, "build/ios/ipa/*.ipa")].first || Dir["build/ios/ipa/*.ipa"].first
+
     upload_to_testflight(
       api_key: api_key,
       app_identifier: "com.agrohisha.app",
+      ipa: ipa_path,
       skip_waiting_for_build_processing: true
     )
   end
@@ -132,9 +142,13 @@ platform :ios do
     build_ios
 
     api_key = load_api_key
+    repo_root = File.expand_path("..", __dir__)
+    ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH] || Dir[File.join(repo_root, "build/ios/ipa/*.ipa")].first || Dir["build/ios/ipa/*.ipa"].first
+
     upload_to_app_store(
       api_key: api_key,
       app_identifier: "com.agrohisha.app",
+      ipa: ipa_path,
       skip_metadata: true,
       skip_screenshots: true,
       submit_for_review: false,
