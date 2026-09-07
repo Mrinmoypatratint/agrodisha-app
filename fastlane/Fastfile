@@ -40,7 +40,7 @@ platform :ios do
     api_key = load_api_key
     setup_ci_keychain
 
-    # Fetch or create distribution certificate and install into CI keychain
+    # Fetch distribution certificate from Apple Developer portal and install into CI keychain
     get_certificates(
       api_key: api_key,
       keychain_path: File.expand_path("~/Library/Keychains/ci_keychain-db"),
