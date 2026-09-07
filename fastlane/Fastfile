@@ -1,3 +1,5 @@
+require "spaceship"
+
 default_platform(:ios)
 
 platform :ios do
@@ -39,6 +41,60 @@ platform :ios do
   lane :build_ios do
     api_key = load_api_key
     setup_ci_keychain
+
+    # Ensure there is an available Distribution certificate slot on Apple Developer portal.
+    # Apple allows at most 2 active Distribution certificates.
+    # Since ephemeral CI runners lack private keys of previous runs, get_certificates
+    # must generate a new certificate. If 2 already exist, we revoke the oldest to make room.
+    begin
+      certs = Spaceship::ConnectAPI::Certificate.all
+      dist_certs = certs.select do |c|
+        c.certificate_type.to_s.upcase.include?("DISTRIBUTION")
+      end
+      UI.message("Found #{dist_certs.count} active distribution certificate(s) on Apple Developer portal.")
+      dist_certs.each do |c|
+        UI.message("  - Cert: id=#{c.id}, name=#{c.name}, type=#{c.certificate_type}, expires=#{c.expiration_date}")
+      end
+
+      # First remove any expired certificates
+      now = Time.now
+      dist_certs.each do |c|
+        if c.expiration_date && (Time.parse(c.expiration_date) rescue now + 1) < now
+          UI.important("Revoking expired distribution certificate #{c.id} (#{c.name})...")
+          begin
+            c.delete!
+          rescue => del_ex
+            UI.error("Failed to delete expired cert #{c.id}: #{del_ex.message}")
+            Spaceship::ConnectAPI.delete_certificate(certificate_id: c.id) rescue nil
+          end
+        end
+      end
+
+      # Refresh list
+      certs = Spaceship::ConnectAPI::Certificate.all
+      dist_certs = certs.select do |c|
+        c.certificate_type.to_s.upcase.include?("DISTRIBUTION")
+      end
+
+      # If 2 or more distribution certificates still exist, revoke oldest until at most 1 remains
+      if dist_certs.count >= 2
+        sorted = dist_certs.sort_by { |c| c.expiration_date || "" }
+        while sorted.count >= 2
+          oldest = sorted.shift
+          UI.important("Revoking distribution certificate #{oldest.id} (#{oldest.name}) to stay within Apple's 2-certificate limit...")
+          begin
+            oldest.delete!
+            UI.success("Successfully revoked certificate #{oldest.id}.")
+          rescue => del_ex
+            UI.error("Failed to delete cert #{oldest.id}: #{del_ex.message}")
+            Spaceship::ConnectAPI.delete_certificate(certificate_id: oldest.id) rescue nil
+          end
+          sleep(2)
+        end
+      end
+    rescue => ex
+      UI.error("Error managing distribution certificates: #{ex.message}")
+    end
 
     # Fetch distribution certificate from Apple Developer portal and install into CI keychain
     get_certificates(
@@ -113,7 +169,9 @@ platform :ios do
     sh("flutter build ipa --release --build-name=2.0.0 --build-number=#{current_build} --export-options-plist=#{export_options_path}")
 
     repo_root = File.expand_path("..", __dir__)
-    ipa_path = Dir[File.join(repo_root, "build/ios/ipa/*.ipa")].first || Dir["build/ios/ipa/*.ipa"].first
+    ipa_candidates = Dir[File.join(repo_root, "build/ios/ipa/*.ipa")] + Dir[File.join(repo_root, "build/ios/archive/*.ipa")] + Dir["build/ios/ipa/*.ipa"] + Dir["**/*.ipa"]
+    ipa_path = ipa_candidates.compact.uniq.find { |f| File.exist?(f) && f.end_with?(".ipa") }
+    UI.user_error!("Could not find built IPA file! Searched: #{ipa_candidates}") unless ipa_path
     UI.message("Resolved generated IPA path: #{ipa_path}")
     lane_context[SharedValues::IPA_OUTPUT_PATH] = ipa_path
     ENV["DELIVER_IPA_PATH"] = ipa_path
@@ -127,8 +185,11 @@ platform :ios do
 
     api_key = load_api_key
     repo_root = File.expand_path("..", __dir__)
-    ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH] || Dir[File.join(repo_root, "build/ios/ipa/*.ipa")].first || Dir["build/ios/ipa/*.ipa"].first
+    ipa_candidates = [lane_context[SharedValues::IPA_OUTPUT_PATH]] + Dir[File.join(repo_root, "build/ios/ipa/*.ipa")] + Dir["build/ios/ipa/*.ipa"] + Dir["**/*.ipa"]
+    ipa_path = ipa_candidates.compact.uniq.find { |f| File.exist?(f) && f.end_with?(".ipa") }
+    UI.user_error!("Could not locate IPA for TestFlight upload! Searched: #{ipa_candidates}") unless ipa_path
 
+    UI.message("Uploading IPA to TestFlight: #{ipa_path}")
     upload_to_testflight(
       api_key: api_key,
       app_identifier: "com.agrohisha.app",
@@ -143,8 +204,11 @@ platform :ios do
 
     api_key = load_api_key
     repo_root = File.expand_path("..", __dir__)
-    ipa_path = lane_context[SharedValues::IPA_OUTPUT_PATH] || Dir[File.join(repo_root, "build/ios/ipa/*.ipa")].first || Dir["build/ios/ipa/*.ipa"].first
+    ipa_candidates = [lane_context[SharedValues::IPA_OUTPUT_PATH]] + Dir[File.join(repo_root, "build/ios/ipa/*.ipa")] + Dir["build/ios/ipa/*.ipa"] + Dir["**/*.ipa"]
+    ipa_path = ipa_candidates.compact.uniq.find { |f| File.exist?(f) && f.end_with?(".ipa") }
+    UI.user_error!("Could not locate IPA for App Store upload! Searched: #{ipa_candidates}") unless ipa_path
 
+    UI.message("Uploading IPA to App Store: #{ipa_path}")
     upload_to_app_store(
       api_key: api_key,
       app_identifier: "com.agrohisha.app",
