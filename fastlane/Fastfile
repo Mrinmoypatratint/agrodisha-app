@@ -70,6 +70,7 @@ platform :ios do
 
     # Clean and prepare dependencies
     sh("flutter clean")
+    sh("rm -rf ios/Pods ios/Podfile.lock")
     sh("flutter precache --ios")
     sh("flutter pub get")
 
