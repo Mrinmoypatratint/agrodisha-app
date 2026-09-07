@@ -48,9 +48,11 @@ platform :ios do
     )
 
     # Fetch or create App Store provisioning profile for com.agrohisha.app
+    # Force recreate to pick up newly enabled capabilities (Push, Sign in with Apple, Associated Domains)
     profile = get_provisioning_profile(
       api_key: api_key,
-      app_identifier: "com.agrohisha.app"
+      app_identifier: "com.agrohisha.app",
+      force: true
     )
 
     # Configure Xcode project for manual signing in CI
