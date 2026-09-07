@@ -131,7 +131,7 @@ platform :ios do
     sh("flutter pub get")
 
     # Check latest build number from TestFlight to avoid duplicate build rejection
-    current_build = 2
+    current_build = 3
     begin
       latest_build = latest_testflight_build_number(
         api_key: api_key,
