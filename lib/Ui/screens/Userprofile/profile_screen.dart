@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:eClassify/Ui/screens/main_activity.dart';
 import 'package:eClassify/Utils/ui_utils.dart';
 import 'package:eClassify/data/cubits/chatCubits/blocked_users_list_cubit.dart';
@@ -504,9 +506,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                         newVersion: Constant.newVersionNumber,
                         svgImagePath: AppIcons.update,
                         onTap: () async {
-                          if (Platform.isIOS) {
+                          if (!kIsWeb && Platform.isIOS) {
                             await launchUrl(Uri.parse(Constant.appstoreURLios));
-                          } else if (Platform.isAndroid) {
+                          } else if (!kIsWeb && Platform.isAndroid) {
                             await launchUrl(
                                 Uri.parse(Constant.playstoreURLAndroid));
                           }
@@ -943,7 +945,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void shareApp() {
     try {
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         Share.share(
             '${Constant.appName}\n${Constant.playstoreURLAndroid}\n${Constant.shareappText}',
             subject: Constant.appName);

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import '../../utils/api.dart';
 import '../model/data_output.dart';
 import '../model/subscription_pacakage_model.dart';
@@ -9,7 +11,7 @@ class SubscriptionRepository {
       {required String type}) async {
     Map<String, dynamic> response = await Api.get(
         url: Api.getPackageApi,
-        queryParameters: {if (Platform.isIOS) "platform": "ios", "type": type});
+        queryParameters: {if (!kIsWeb && Platform.isIOS) "platform": "ios", "type": type});
 
     List<SubscriptionPackageModel> modelList = (response['data'] as List)
         .map((element) => SubscriptionPackageModel.fromJson(element))

@@ -1,6 +1,8 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:eClassify/Utils/AppIcon.dart';
 import 'package:eClassify/Utils/payment/gatways/stripe_service.dart';
 import 'package:eClassify/exports/main_export.dart';
@@ -19,9 +21,9 @@ class PaymentGateways {
 
   static String generateReference(String email) {
     late String platform;
-    if (Platform.isIOS) {
+    if (!kIsWeb && Platform.isIOS) {
       platform = 'I';
-    } else if (Platform.isAndroid) {
+    } else if (!kIsWeb && Platform.isAndroid) {
       platform = 'A';
     }
     String reference =

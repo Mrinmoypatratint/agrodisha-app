@@ -12,7 +12,7 @@ import FirebaseMessaging
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GMSServices.provideAPIKey("PLACE_YOUR_IOS_MAP_ID")
+    GMSServices.provideAPIKey("AIzaSyD622HBVKUal9njLJ8l6NKtRN0SIhNafaw")
 
     GeneratedPluginRegistrant.register(with: self)
 

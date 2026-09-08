@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:eClassify/Ui/screens/Subscription/payment_gatways.dart';
 import 'package:eClassify/Utils/AppIcon.dart';
 import 'package:eClassify/Utils/Extensions/extensions.dart';
@@ -189,7 +191,7 @@ class _SubscriptionPlansItemState extends State<SubscriptionPlansItem> {
                             onNotGuest: () {
                               if (!widget.model.isActive!) {
                                 if (widget.model.finalPrice! > 0) {
-                                  if (Platform.isIOS) {
+                                  if (!kIsWeb && Platform.isIOS) {
                                     inAppPurchase.buy(
                                         widget.model.iosProductId!,
                                         widget.model.id!.toString());

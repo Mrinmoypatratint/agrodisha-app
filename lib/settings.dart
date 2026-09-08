@@ -26,12 +26,12 @@ class PaymentGateway {
 
 class AppSettings {
   /// Basic Settings
-  static const String applicationName = 'eClassify';
+  static const String applicationName = 'Agrodisha';
   static const String andoidPackageName = 'com.agrohisha.app';
-  static const String iOSAppId = '12345678';
+  static const String iOSAppId = '6807306534';
   static const String playstoreURLAndroid =
       "https://play.google.com/store/apps/details?id=$andoidPackageName";
-  static const String appstoreURLios = "https://apps.apple.com/";
+  static const String appstoreURLios = "https://apps.apple.com/app/agrodisha/id6807306534";
   static const String shareAppText = "Share this App";
 
 
