@@ -143,6 +143,16 @@ platform :ios do
       UI.message("Could not fetch remote build number (first build or pending record): #{ex.message}. Using build number #{current_build}")
     end
 
+    # Ensure project.pbxproj does not hardcode FLUTTER_BUILD_NUMBER or old CURRENT_PROJECT_VERSION
+    pbxproj_path = File.expand_path("../ios/Runner.xcodeproj/project.pbxproj")
+    if File.exist?(pbxproj_path)
+      content = File.read(pbxproj_path)
+      content.gsub!(/\t*FLUTTER_BUILD_NUMBER = .*;\n/, "")
+      content.gsub!(/CURRENT_PROJECT_VERSION = .*;/, 'CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";')
+      content.gsub!(/MARKETING_VERSION = .*;/, 'MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";')
+      File.write(pbxproj_path, content)
+    end
+
     # Generate ExportOptions.plist for flutter build ipa
     export_options_path = File.expand_path("../ios/ExportOptions.plist")
     File.write(export_options_path, <<~PLIST)
@@ -175,6 +185,24 @@ platform :ios do
     UI.message("Resolved generated IPA path: #{ipa_path}")
     lane_context[SharedValues::IPA_OUTPUT_PATH] = ipa_path
     ENV["DELIVER_IPA_PATH"] = ipa_path
+
+    # Verify built IPA Info.plist version
+    require "tmpdir"
+    unzip_tmp = Dir.mktmpdir
+    begin
+      sh("unzip -q '#{ipa_path}' -d '#{unzip_tmp}'")
+      app_dir = Dir[File.join(unzip_tmp, "Payload", "*.app")].first
+      if app_dir
+        info_plist = File.join(app_dir, "Info.plist")
+        version_name = `/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "#{info_plist}"`.strip rescue "unknown"
+        version_code = `/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "#{info_plist}"`.strip rescue "unknown"
+        UI.success("Built IPA Verification: CFBundleShortVersionString=#{version_name}, CFBundleVersion=#{version_code}")
+      end
+    rescue => ex
+      UI.message("Could not inspect IPA Info.plist: #{ex.message}")
+    ensure
+      FileUtils.rm_rf(unzip_tmp) rescue nil
+    end
 
     cleanup_ci_keychain
   end
