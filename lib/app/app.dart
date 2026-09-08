@@ -19,42 +19,60 @@ PersonalizedInterestSettings.empty();
 
 void initApp() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  /// Google Maps optimization
-  final mapsImplementation = GoogleMapsFlutterPlatform.instance;
-  if (mapsImplementation is GoogleMapsFlutterAndroid) {
-    mapsImplementation.useAndroidViewSurface = false;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase init error: $e");
   }
 
-  /// Firebase initialization (FIXED)
+  /// Google Maps optimization
+  if (!kIsWeb) {
+    try {
+      final mapsImplementation = GoogleMapsFlutterPlatform.instance;
+      if (mapsImplementation is GoogleMapsFlutterAndroid) {
+        mapsImplementation.useAndroidViewSurface = false;
+      }
+    } catch (_) {}
+  }
 
   /// Hydrated Bloc
-  HydratedBloc.storage = await HydratedStorage.build(
-    storageDirectory: kIsWeb
-        ? HydratedStorage.webStorageDirectory
-        : await getApplicationDocumentsDirectory(),
-  );
+  try {
+    HydratedBloc.storage = await HydratedStorage.build(
+      storageDirectory: kIsWeb
+          ? HydratedStorage.webStorageDirectory
+          : await getApplicationDocumentsDirectory(),
+    );
+  } catch (e) {
+    debugPrint("HydratedBloc error: $e");
+  }
 
   /// Hive
-  await Hive.initFlutter();
-  await Hive.openBox(HiveKeys.userDetailsBox);
-  await Hive.openBox(HiveKeys.authBox);
-  await Hive.openBox(HiveKeys.languageBox);
-  await Hive.openBox(HiveKeys.themeBox);
-  await Hive.openBox(HiveKeys.svgBox);
-  await Hive.openBox(HiveKeys.jwtToken);
-  await Hive.openBox(HiveKeys.historyBox);
+  try {
+    await Hive.initFlutter();
+    await Hive.openBox(HiveKeys.userDetailsBox);
+    await Hive.openBox(HiveKeys.authBox);
+    await Hive.openBox(HiveKeys.languageBox);
+    await Hive.openBox(HiveKeys.themeBox);
+    await Hive.openBox(HiveKeys.svgBox);
+    await Hive.openBox(HiveKeys.jwtToken);
+    await Hive.openBox(HiveKeys.historyBox);
+  } catch (e) {
+    debugPrint("Hive error: $e");
+  }
 
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then(
-        (_) {
-      SystemChrome.setSystemUIOverlayStyle(
-        const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
-      );
-      runApp(const EntryPoint());
-    },
-  );
+  if (kIsWeb) {
+    runApp(const EntryPoint());
+  } else {
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then(
+      (_) {
+        SystemChrome.setSystemUIOverlayStyle(
+          const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+        );
+        runApp(const EntryPoint());
+      },
+    );
+  }
 }
 

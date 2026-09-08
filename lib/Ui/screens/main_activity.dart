@@ -221,6 +221,7 @@ class MainActivityState extends State<MainActivity>
   }
 
   void versionCheck(settings) async {
+    if (kIsWeb) return;
     var remoteVersion = settings.getSetting(Platform.isIOS
         ? SystemSetting.iosVersion
         : SystemSetting.androidVersion);

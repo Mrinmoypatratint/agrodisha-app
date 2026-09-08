@@ -556,7 +556,7 @@ class LoginScreenState extends State<LoginScreen> {
                   const SizedBox(
                     height: 12,
                   ),
-                  if (Platform.isIOS)
+                  if (!kIsWeb && Platform.isIOS)
                     UiUtils.buildButton(context,
                         prefixWidget: Padding(
                           padding: EdgeInsetsDirectional.only(end: 10.0),

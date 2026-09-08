@@ -50,7 +50,7 @@ class AuthenticationCubit extends Cubit<AuthenticationState> {
   MMultiAuthentication mMultiAuthentication = MMultiAuthentication({
     "google": GoogleLogin(),
     "email": EmailLogin(),
-    if (Platform.isIOS) "apple": AppleLogin(),
+    if (!kIsWeb && Platform.isIOS) "apple": AppleLogin(),
     "phone": PhoneLogin()
   });
 
@@ -177,7 +177,7 @@ import '../../../Utils/Login/lib/payloads.dart';
     MMultiAuthentication mMultiAuthentication = MMultiAuthentication({
       "google": GoogleLogin(),
       "email": EmailLogin(),
-      if (Platform.isIOS) "apple": AppleLogin(),
+      if (!kIsWeb && Platform.isIOS) "apple": AppleLogin(),
       "phone": PhoneLogin()
     });
 

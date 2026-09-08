@@ -1,4 +1,5 @@
 export 'package:device_preview/device_preview.dart';
+export 'package:flutter/foundation.dart';
 
 export 'package:flutter_bloc/flutter_bloc.dart';
 export 'package:flutter_localizations/flutter_localizations.dart';
