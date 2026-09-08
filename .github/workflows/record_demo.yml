@@ -1,0 +1,110 @@
+name: Record iOS Simulator Demo Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: 'iPhone Simulator Device Name'
+        required: false
+        default: 'iPhone 16'
+        type: string
+
+jobs:
+  record-simulator:
+    name: Record Demo on iOS Simulator
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter & Xcode version
+        run: |
+          flutter --version
+          xcodebuild -version
+
+      - name: Prepare Flutter Dependencies
+        run: |
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
+
+      - name: Boot iOS Simulator
+        id: boot-sim
+        run: |
+          REQ_DEVICE="${{ github.event.inputs.device || 'iPhone 16' }}"
+          echo "Looking for simulator: $REQ_DEVICE"
+          
+          # List available devices
+          xcrun simctl list devices available
+          
+          # Find UUID matching device name
+          SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "$REQ_DEVICE" | awk -F '[()]' '{print $2}')
+          if [ -z "$SIM_UUID" ]; then
+            echo "Falling back to iPhone 15..."
+            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone 15" | awk -F '[()]' '{print $2}')
+          fi
+          if [ -z "$SIM_UUID" ]; then
+            echo "Falling back to any iPhone..."
+            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone" | awk -F '[()]' '{print $2}')
+          fi
+          
+          echo "Selected Simulator UUID: $SIM_UUID"
+          echo "sim_uuid=$SIM_UUID" >> $GITHUB_OUTPUT
+          
+          # Boot the simulator
+          xcrun simctl boot "$SIM_UUID"
+          xcrun simctl bootstatus "$SIM_UUID" -b
+
+      - name: Build, Run Walkthrough & Record Screen
+        run: |
+          SIM_UUID="${{ steps.boot-sim.outputs.sim_uuid }}"
+          echo "Target Simulator: $SIM_UUID"
+          mkdir -p output
+
+          # Start video recording on simulator
+          echo "Starting video recording..."
+          xcrun simctl io "$SIM_UUID" recordVideo --codec=h264 output/agrodisha_app_demo.mp4 &
+          REC_PID=$!
+          echo "Screen recorder PID: $REC_PID"
+          sleep 3
+
+          # Execute automated user-flow walkthrough
+          echo "Executing walkthrough integration test..."
+          flutter test integration_test/demo_walkthrough_test.dart -d "$SIM_UUID" || true
+          
+          # Let the final screen display for a few moments
+          sleep 5
+
+          # Gracefully stop video recorder (SIGINT ensures valid MP4 file container)
+          echo "Stopping screen recording (SIGINT to PID $REC_PID)..."
+          kill -2 $REC_PID || true
+          wait $REC_PID 2>/dev/null || true
+          sleep 3
+
+          # Verify video file
+          ls -lh output/
+          if [ ! -s output/agrodisha_app_demo.mp4 ]; then
+            echo "ERROR: Video file was not created or is empty!"
+            exit 1
+          fi
+
+      - name: Upload Demo Video Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agrodisha-app-demo-video
+          path: output/agrodisha_app_demo.mp4
+          if-no-files-found: error
