@@ -38,7 +38,7 @@ jobs:
 
       - name: Set up Python & Pillow
         run: |
-          python3 -m pip install --upgrade pip pillow
+          python3 -m pip install --upgrade --break-system-packages pillow
 
       - name: Verify Environment
         run: |
