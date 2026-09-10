@@ -1,0 +1,221 @@
+name: Capture iOS Simulator Screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: 'iPhone Simulator Device Name'
+        required: false
+        default: 'iPhone 16 Pro Max'
+        type: string
+      capture_ipad:
+        description: 'Also capture iPad Pro 13-inch screenshots?'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  capture-screenshots:
+    name: Capture Real iOS Simulator Screenshots
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Set up Python & Pillow
+        run: |
+          python3 -m pip install --upgrade pip pillow
+
+      - name: Verify Environment
+        run: |
+          flutter --version
+          xcodebuild -version
+          xcrun simctl list devices available
+
+      - name: Prepare Flutter Dependencies
+        run: |
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
+
+      - name: Boot iPhone Simulator & Capture Screenshots
+        run: |
+          REQ_DEVICE="${{ github.event.inputs.device || 'iPhone 16 Pro Max' }}"
+          echo "=== Searching for iPhone Simulator: $REQ_DEVICE ==="
+          mkdir -p output/screenshots_iphone_6_7
+          mkdir -p output/screenshots_iphone_6_5
+
+          # Find simulator UUID
+          SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "$REQ_DEVICE" | awk -F '[()]' '{print $2}')
+          if [ -z "$SIM_UUID" ]; then
+            echo "Falling back to iPhone 15 Pro Max..."
+            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone 15 Pro Max" | awk -F '[()]' '{print $2}')
+          fi
+          if [ -z "$SIM_UUID" ]; then
+            echo "Falling back to iPhone 16..."
+            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone 16" | awk -F '[()]' '{print $2}')
+          fi
+          if [ -z "$SIM_UUID" ]; then
+            echo "Falling back to any iPhone..."
+            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone" | awk -F '[()]' '{print $2}')
+          fi
+
+          echo "Selected iPhone Simulator UUID: $SIM_UUID"
+          xcrun simctl boot "$SIM_UUID"
+          xcrun simctl bootstatus "$SIM_UUID" -b
+
+          # Set Apple standard 9:41 AM status bar
+          xcrun simctl status_bar "$SIM_UUID" override \
+            --time "9:41" \
+            --dataNetwork wifi \
+            --wifiMode active \
+            --wifiBars 3 \
+            --cellularMode active \
+            --cellularBars 4 \
+            --batteryState charged \
+            --batteryLevel 100
+
+          # Start background watcher to capture screenshots on test signals
+          LOG_FILE="iphone_test_log.txt"
+          touch "$LOG_FILE"
+          (
+            tail -f -n 0 "$LOG_FILE" | while IFS= read -r line; do
+              if [[ "$line" =~ \>\>\>\ CAPTURE_SCREENSHOT:\ ([a-zA-Z0-9_]+) ]]; then
+                SHOT_NAME="${BASH_REMATCH[1]}"
+                echo "[WATCHER] Capturing iPhone screenshot: $SHOT_NAME"
+                sleep 2
+                xcrun simctl io "$SIM_UUID" screenshot "output/screenshots_iphone_6_7/${SHOT_NAME}.png"
+                echo "[WATCHER] Saved: output/screenshots_iphone_6_7/${SHOT_NAME}.png"
+              fi
+            done
+          ) &
+          WATCHER_PID=$!
+
+          # Run Flutter screenshot integration test
+          echo "Executing integration test on iPhone simulator..."
+          flutter test integration_test/screenshot_walkthrough_test.dart -d "$SIM_UUID" 2>&1 | tee "$LOG_FILE" || true
+
+          # Wait briefly, stop watcher, and shutdown simulator
+          sleep 3
+          kill $WATCHER_PID 2>/dev/null || true
+          xcrun simctl shutdown "$SIM_UUID" || true
+
+          echo "Captured iPhone screenshots:"
+          ls -la output/screenshots_iphone_6_7/
+
+      - name: Boot iPad Simulator & Capture Screenshots (Optional)
+        if: ${{ github.event.inputs.capture_ipad == 'true' || github.event.inputs.capture_ipad == '' }}
+        run: |
+          echo "=== Searching for iPad Simulator ==="
+          mkdir -p output/screenshots_ipad_13
+
+          IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro 13-inch" | awk -F '[()]' '{print $2}')
+          if [ -z "$IPAD_UUID" ]; then
+            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro (12.9-inch" | awk -F '[()]' '{print $2}')
+          fi
+          if [ -z "$IPAD_UUID" ]; then
+            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro" | awk -F '[()]' '{print $2}')
+          fi
+
+          if [ -n "$IPAD_UUID" ]; then
+            echo "Selected iPad Simulator UUID: $IPAD_UUID"
+            xcrun simctl boot "$IPAD_UUID"
+            xcrun simctl bootstatus "$IPAD_UUID" -b
+
+            # Set Apple standard 9:41 AM status bar
+            xcrun simctl status_bar "$IPAD_UUID" override \
+              --time "9:41" \
+              --dataNetwork wifi \
+              --wifiMode active \
+              --wifiBars 3 \
+              --cellularMode active \
+              --cellularBars 4 \
+              --batteryState charged \
+              --batteryLevel 100
+
+            # Start background watcher
+            IPAD_LOG="ipad_test_log.txt"
+            touch "$IPAD_LOG"
+            (
+              tail -f -n 0 "$IPAD_LOG" | while IFS= read -r line; do
+                if [[ "$line" =~ \>\>\>\ CAPTURE_SCREENSHOT:\ ([a-zA-Z0-9_]+) ]]; then
+                  SHOT_NAME="${BASH_REMATCH[1]}"
+                  echo "[WATCHER] Capturing iPad screenshot: $SHOT_NAME"
+                  sleep 2
+                  xcrun simctl io "$IPAD_UUID" screenshot "output/screenshots_ipad_13/${SHOT_NAME}.png"
+                  echo "[WATCHER] Saved: output/screenshots_ipad_13/${SHOT_NAME}.png"
+                fi
+              done
+            ) &
+            IPAD_WATCHER_PID=$!
+
+            # Run Flutter screenshot integration test on iPad
+            echo "Executing integration test on iPad simulator..."
+            flutter test integration_test/screenshot_walkthrough_test.dart -d "$IPAD_UUID" 2>&1 | tee "$IPAD_LOG" || true
+
+            sleep 3
+            kill $IPAD_WATCHER_PID 2>/dev/null || true
+            xcrun simctl shutdown "$IPAD_UUID" || true
+
+            echo "Captured iPad screenshots:"
+            ls -la output/screenshots_ipad_13/
+          else
+            echo "No iPad Pro simulator found, skipping iPad capture."
+          fi
+
+      - name: Process Screenshots for App Store Compliance (RGB & Dimension Scaling)
+        run: |
+          python3 - << 'EOF'
+          import os, glob
+          from PIL import Image
+
+          iphone_6_7_dir = "output/screenshots_iphone_6_7"
+          iphone_6_5_dir = "output/screenshots_iphone_6_5"
+          ipad_dir = "output/screenshots_ipad_13"
+
+          os.makedirs(iphone_6_5_dir, exist_ok=True)
+
+          # Process iPhone 6.7" / 6.9" screenshots
+          for f in sorted(glob.glob(f"{iphone_6_7_dir}/*.png")):
+              fname = os.path.basename(f)
+              with Image.open(f) as img:
+                  # Strip alpha transparency for App Store Connect
+                  rgb_img = img.convert("RGB")
+                  rgb_img.save(f, "PNG")
+                  print(f"Processed 6.7\" screenshot: {fname} -> {rgb_img.size}")
+
+                  # Generate 6.5" App Store size (1242 x 2688)
+                  img_6_5 = rgb_img.resize((1242, 2688), Image.Resampling.LANCZOS)
+                  img_6_5.save(os.path.join(iphone_6_5_dir, fname), "PNG")
+                  print(f"Generated 6.5\" screenshot: {fname} -> (1242, 2688)")
+
+          # Process iPad screenshots if available
+          if os.path.exists(ipad_dir):
+              for f in sorted(glob.glob(f"{ipad_dir}/*.png")):
+                  fname = os.path.basename(f)
+                  with Image.open(f) as img:
+                      rgb_img = img.convert("RGB")
+                      rgb_img.save(f, "PNG")
+                      print(f"Processed iPad screenshot: {fname} -> {rgb_img.size}")
+          EOF
+
+      - name: Upload App Store Screenshots Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agrodisha-ios-appstore-screenshots
+          path: output/
+          if-no-files-found: warn
