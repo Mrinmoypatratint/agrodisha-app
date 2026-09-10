@@ -8,17 +8,12 @@ on:
         required: false
         default: 'iPhone 16 Pro Max'
         type: string
-      capture_ipad:
-        description: 'Also capture iPad Pro 13-inch screenshots?'
-        required: false
-        default: true
-        type: boolean
 
 jobs:
   capture-iphone:
     name: Capture iPhone Screenshots
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Checkout repository
@@ -50,18 +45,11 @@ jobs:
         run: |
           REQ_DEVICE="${{ github.event.inputs.device || 'iPhone 16 Pro Max' }}"
           echo "Looking for: $REQ_DEVICE"
-          xcrun simctl list devices available
 
           SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "$REQ_DEVICE" | awk -F '[()]' '{print $2}')
-          if [ -z "$SIM_UUID" ]; then
-            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone 15 Pro Max" | awk -F '[()]' '{print $2}')
-          fi
-          if [ -z "$SIM_UUID" ]; then
-            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone 16" | awk -F '[()]' '{print $2}')
-          fi
-          if [ -z "$SIM_UUID" ]; then
-            SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone" | awk -F '[()]' '{print $2}')
-          fi
+          [ -z "$SIM_UUID" ] && SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone 15 Pro Max" | awk -F '[()]' '{print $2}')
+          [ -z "$SIM_UUID" ] && SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone 16" | awk -F '[()]' '{print $2}')
+          [ -z "$SIM_UUID" ] && SIM_UUID=$(xcrun simctl list devices available | grep -m 1 "iPhone" | awk -F '[()]' '{print $2}')
 
           echo "Selected UUID: $SIM_UUID"
           echo "sim_uuid=$SIM_UUID" >> $GITHUB_OUTPUT
@@ -69,6 +57,7 @@ jobs:
           xcrun simctl boot "$SIM_UUID"
           xcrun simctl bootstatus "$SIM_UUID" -b
 
+          # Clean Apple-standard status bar
           xcrun simctl status_bar "$SIM_UUID" override \
             --time "9:41" \
             --dataNetwork wifi \
@@ -79,105 +68,33 @@ jobs:
             --batteryState charged \
             --batteryLevel 100
 
-      - name: Build & Install Flutter App on Simulator
-        run: |
-          flutter build ios --simulator --debug
-          SIM_UUID="${{ steps.boot-iphone.outputs.sim_uuid }}"
-          xcrun simctl install "$SIM_UUID" build/ios/iphonesimulator/Runner.app
-          xcrun simctl launch "$SIM_UUID" com.agrohisha.app
-
-      - name: Capture iPhone Screenshots (Timed Sequence)
+      - name: Run Integration Test & Capture Screenshots
         run: |
           SIM_UUID="${{ steps.boot-iphone.outputs.sim_uuid }}"
-          mkdir -p output/screenshots_iphone
+          mkdir -p output/screenshots
 
-          echo "Waiting 12 seconds for app splash/onboarding..."
-          sleep 12
-
-          # Screenshot 1: Whatever is on screen (likely splash or onboarding)
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone/01_Splash_Or_Onboarding.png
-          echo "Captured 01"
-
-          sleep 8
-
-          # Screenshot 2: Should be home screen or still onboarding
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone/02_Home_Screen.png
-          echo "Captured 02"
-
-          sleep 5
-
-          # Screenshot 3
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone/03_Home_Loaded.png
-          echo "Captured 03"
-
-          sleep 5
-
-          # Screenshot 4
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone/04_App_State.png
-          echo "Captured 04"
-
-          echo "--- Timed screenshots complete ---"
-          ls -lh output/screenshots_iphone/
-
-      - name: Run Integration Test for Navigation Screenshots
-        run: |
-          SIM_UUID="${{ steps.boot-iphone.outputs.sim_uuid }}"
-          mkdir -p output/screenshots_iphone_test
-
-          # Terminate the launched app first so integration test can start fresh
-          xcrun simctl terminate "$SIM_UUID" com.agrohisha.app || true
-          sleep 2
-
-          # Run the test in the background
+          # Run integration test in background
           flutter test integration_test/screenshot_walkthrough_test.dart -d "$SIM_UUID" &
           TEST_PID=$!
 
-          # Take screenshots at intervals while the test navigates
-          sleep 15
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T01_after_15s.png 2>/dev/null || true
-          echo "Captured T01"
+          # The Xcode build takes ~4 minutes. The test then runs for ~2 minutes.
+          # We take screenshots every 8 seconds starting at 4:30 to cover the full test run.
+          # This gives us ~25 screenshots across the entire user flow.
 
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T02_after_25s.png 2>/dev/null || true
-          echo "Captured T02"
+          echo "Waiting 270 seconds for Xcode build to complete..."
+          sleep 270
 
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T03_after_35s.png 2>/dev/null || true
-          echo "Captured T03"
+          echo "Starting screenshot capture sequence..."
+          for i in $(seq -w 1 30); do
+            xcrun simctl io "$SIM_UUID" screenshot "output/screenshots/shot_${i}.png" 2>/dev/null && echo "Captured shot_${i}" || true
+            sleep 8
+          done
 
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T04_after_45s.png 2>/dev/null || true
-          echo "Captured T04"
-
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T05_after_55s.png 2>/dev/null || true
-          echo "Captured T05"
-
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T06_after_65s.png 2>/dev/null || true
-          echo "Captured T06"
-
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T07_after_75s.png 2>/dev/null || true
-          echo "Captured T07"
-
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T08_after_85s.png 2>/dev/null || true
-          echo "Captured T08"
-
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T09_after_95s.png 2>/dev/null || true
-          echo "Captured T09"
-
-          sleep 10
-          xcrun simctl io "$SIM_UUID" screenshot output/screenshots_iphone_test/T10_after_105s.png 2>/dev/null || true
-          echo "Captured T10"
-
-          # Wait for test to finish (with timeout)
+          echo "Waiting for integration test to finish..."
           wait $TEST_PID 2>/dev/null || true
 
-          echo "--- Integration test screenshots ---"
-          ls -lh output/screenshots_iphone_test/
+          echo "All screenshots captured:"
+          ls -lh output/screenshots/
 
       - name: Shutdown iPhone Simulator
         if: always()
@@ -191,220 +108,31 @@ jobs:
           import os, glob
           from PIL import Image
 
-          dirs = ["output/screenshots_iphone", "output/screenshots_iphone_test"]
-          for d in dirs:
-              if not os.path.exists(d):
-                  continue
-              for f in sorted(glob.glob(f"{d}/*.png")):
-                  try:
-                      with Image.open(f) as img:
-                          rgb = img.convert("RGB")
-                          rgb.save(f, "PNG")
-                          print(f"Processed: {f} -> {rgb.size}")
-                  except Exception as e:
-                      print(f"Error processing {f}: {e}")
+          src = "output/screenshots"
+          dst_67 = "output/appstore_6_7_inch"
+          dst_65 = "output/appstore_6_5_inch"
+          os.makedirs(dst_67, exist_ok=True)
+          os.makedirs(dst_65, exist_ok=True)
 
-          # Also generate 6.5" scaled versions (1242x2688)
-          os.makedirs("output/screenshots_iphone_6_5", exist_ok=True)
-          src_dir = "output/screenshots_iphone_test"
-          if not os.path.exists(src_dir):
-              src_dir = "output/screenshots_iphone"
-          for f in sorted(glob.glob(f"{src_dir}/*.png")):
+          for f in sorted(glob.glob(f"{src}/*.png")):
+              fname = os.path.basename(f)
               try:
-                  fname = os.path.basename(f)
                   with Image.open(f) as img:
-                      img65 = img.convert("RGB").resize((1242, 2688), Image.Resampling.LANCZOS)
-                      img65.save(f"output/screenshots_iphone_6_5/{fname}", "PNG")
-                      print(f"Scaled 6.5\": {fname}")
+                      rgb = img.convert("RGB")
+                      # Save full-res (6.7" / 6.9")
+                      rgb.save(os.path.join(dst_67, fname), "PNG")
+                      # Scale to 6.5" (1242x2688)
+                      scaled = rgb.resize((1242, 2688), Image.Resampling.LANCZOS)
+                      scaled.save(os.path.join(dst_65, fname), "PNG")
+                      print(f"OK: {fname} {rgb.size}")
               except Exception as e:
-                  print(f"Error scaling {f}: {e}")
+                  print(f"ERR: {fname}: {e}")
           PYEOF
 
-      - name: Upload iPhone Screenshots
+      - name: Upload Screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: agrodisha-iphone-screenshots
-          path: output/
-          if-no-files-found: warn
-
-  capture-ipad:
-    name: Capture iPad Screenshots
-    runs-on: macos-latest
-    if: ${{ github.event.inputs.capture_ipad == 'true' || github.event.inputs.capture_ipad == '' }}
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Set up Python & Pillow
-        run: |
-          python3 -m pip install --upgrade --break-system-packages pillow
-
-      - name: Prepare Flutter Dependencies
-        run: |
-          flutter config --no-enable-swift-package-manager
-          flutter pub get
-
-      - name: Boot iPad Simulator
-        id: boot-ipad
-        run: |
-          echo "Looking for iPad Pro simulators..."
-          xcrun simctl list devices available | grep -i "iPad"
-
-          IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro 13-inch" | awk -F '[()]' '{print $2}')
-          if [ -z "$IPAD_UUID" ]; then
-            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro (12.9-inch" | awk -F '[()]' '{print $2}')
-          fi
-          if [ -z "$IPAD_UUID" ]; then
-            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro" | awk -F '[()]' '{print $2}')
-          fi
-          if [ -z "$IPAD_UUID" ]; then
-            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad" | awk -F '[()]' '{print $2}')
-          fi
-
-          if [ -z "$IPAD_UUID" ]; then
-            echo "::error::No iPad simulator found"
-            exit 1
-          fi
-
-          echo "Selected iPad UUID: $IPAD_UUID"
-          echo "ipad_uuid=$IPAD_UUID" >> $GITHUB_OUTPUT
-
-          xcrun simctl boot "$IPAD_UUID"
-          xcrun simctl bootstatus "$IPAD_UUID" -b
-
-          xcrun simctl status_bar "$IPAD_UUID" override \
-            --time "9:41" \
-            --dataNetwork wifi \
-            --wifiMode active \
-            --wifiBars 3 \
-            --cellularMode active \
-            --cellularBars 4 \
-            --batteryState charged \
-            --batteryLevel 100
-
-      - name: Build & Install Flutter App on iPad Simulator
-        run: |
-          flutter build ios --simulator --debug
-          IPAD_UUID="${{ steps.boot-ipad.outputs.ipad_uuid }}"
-          xcrun simctl install "$IPAD_UUID" build/ios/iphonesimulator/Runner.app
-          xcrun simctl launch "$IPAD_UUID" com.agrohisha.app
-
-      - name: Capture iPad Screenshots (Timed Sequence)
-        run: |
-          IPAD_UUID="${{ steps.boot-ipad.outputs.ipad_uuid }}"
-          mkdir -p output/screenshots_ipad
-
-          echo "Waiting 12 seconds for app to load..."
-          sleep 12
-
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad/01_iPad_Splash.png
-          echo "Captured 01"
-          sleep 8
-
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad/02_iPad_Home.png
-          echo "Captured 02"
-          sleep 5
-
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad/03_iPad_Loaded.png
-          echo "Captured 03"
-          sleep 5
-
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad/04_iPad_State.png
-          echo "Captured 04"
-
-          echo "--- iPad timed screenshots ---"
-          ls -lh output/screenshots_ipad/
-
-      - name: Run Integration Test for iPad Navigation Screenshots
-        run: |
-          IPAD_UUID="${{ steps.boot-ipad.outputs.ipad_uuid }}"
-          mkdir -p output/screenshots_ipad_test
-
-          xcrun simctl terminate "$IPAD_UUID" com.agrohisha.app || true
-          sleep 2
-
-          flutter test integration_test/screenshot_walkthrough_test.dart -d "$IPAD_UUID" &
-          TEST_PID=$!
-
-          sleep 15
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T01_after_15s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T02_after_25s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T03_after_35s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T04_after_45s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T05_after_55s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T06_after_65s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T07_after_75s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T08_after_85s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T09_after_95s.png 2>/dev/null || true
-
-          sleep 10
-          xcrun simctl io "$IPAD_UUID" screenshot output/screenshots_ipad_test/T10_after_105s.png 2>/dev/null || true
-
-          wait $TEST_PID 2>/dev/null || true
-
-          echo "--- iPad integration test screenshots ---"
-          ls -lh output/screenshots_ipad_test/
-
-      - name: Shutdown iPad Simulator
-        if: always()
-        run: |
-          xcrun simctl shutdown "${{ steps.boot-ipad.outputs.ipad_uuid }}" || true
-
-      - name: Process iPad Screenshots (Strip Alpha)
-        if: always()
-        run: |
-          python3 - << 'PYEOF'
-          import os, glob
-          from PIL import Image
-
-          for d in ["output/screenshots_ipad", "output/screenshots_ipad_test"]:
-              if not os.path.exists(d):
-                  continue
-              for f in sorted(glob.glob(f"{d}/*.png")):
-                  try:
-                      with Image.open(f) as img:
-                          rgb = img.convert("RGB")
-                          rgb.save(f, "PNG")
-                          print(f"Processed: {f} -> {rgb.size}")
-                  except Exception as e:
-                      print(f"Error: {e}")
-          PYEOF
-
-      - name: Upload iPad Screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: agrodisha-ipad-screenshots
+          name: agrodisha-appstore-screenshots
           path: output/
           if-no-files-found: warn
