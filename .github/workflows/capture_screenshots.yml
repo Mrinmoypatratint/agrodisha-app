@@ -265,15 +265,15 @@ jobs:
           echo "Looking for iPad Pro simulators..."
           xcrun simctl list devices available | grep -i "iPad"
 
-          IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro 13-inch" | awk -F '[()]' '{print $2}')
+          IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro 13-inch" | grep -Eo '[0-9A-F-]{36}')
           if [ -z "$IPAD_UUID" ]; then
-            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro (12.9-inch" | awk -F '[()]' '{print $2}')
+            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro (12.9-inch" | grep -Eo '[0-9A-F-]{36}')
           fi
           if [ -z "$IPAD_UUID" ]; then
-            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro" | awk -F '[()]' '{print $2}')
+            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad Pro" | grep -Eo '[0-9A-F-]{36}')
           fi
           if [ -z "$IPAD_UUID" ]; then
-            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad" | awk -F '[()]' '{print $2}')
+            IPAD_UUID=$(xcrun simctl list devices available | grep -m 1 "iPad" | grep -Eo '[0-9A-F-]{36}')
           fi
 
           if [ -z "$IPAD_UUID" ]; then
