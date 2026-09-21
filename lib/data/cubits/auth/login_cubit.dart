@@ -48,7 +48,14 @@ class LoginCubit extends Cubit<LoginState> {
     try {
       emit(LoginInProgress());
 
-      String? token = await FirebaseMessaging.instance.getToken();
+      String? token;
+      try {
+        token = await FirebaseMessaging.instance.getToken();
+      } catch (e) {
+        // On iOS simulators or before APNs token is assigned, getToken() throws
+        // [firebase_messaging/apns-token-not-set]. We safely catch this so login proceeds.
+        print("FCM token retrieval error (continuing login): $e");
+      }
 
       FirebaseAuth firebaseAuth = FirebaseAuth.instance;
 
@@ -65,12 +72,12 @@ class LoginCubit extends Cubit<LoginState> {
         phone: phoneNumber ?? credential.user!.providerData[0].phoneNumber,
         type: type,
         uid: firebaseUserId,
-        fcmId: token!,
+        fcmId: token ?? "",
         email: credential.user!.providerData[0].email,
         name: type == AuthenticationType.apple.name
             ? updatedUser?.displayName ??
-            credential.user!.displayName ??
-            credential.user!.providerData[0].displayName
+                credential.user!.displayName ??
+                credential.user!.providerData[0].displayName
             : credential.user!.providerData[0].displayName,
         profile: credential.user!.providerData[0].photoURL,
         countryCode: countryCode,
