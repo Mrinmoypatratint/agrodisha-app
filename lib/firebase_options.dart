@@ -47,21 +47,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyApCJcVfUTKAdfiNB2vZ399YgJEFy_d-vk',
-    appId: '1:6343732161:android:be9cbc67ef8a19792b5d40',
-    messagingSenderId: '6343732161',
-    projectId: 'eclassify-wrteam',
-    storageBucket: 'eclassify-wrteam.appspot.com',
+    apiKey: 'AIzaSyAfnA8I67njl9NAGj_xB9oE-BjKy5gCeMg',
+    appId: '1:827090007541:android:4672694cec89f329191cbc',
+    messagingSenderId: '827090007541',
+    projectId: 'agro-bs-f0273',
+    storageBucket: 'agro-bs-f0273.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBgKBEjpogvomINJ6uutsUQrHntz4g4PUQ',
-    appId: '1:6343732161:ios:5cc58a2dcfbbb66b2b5d40',
-    messagingSenderId: '6343732161',
-    projectId: 'eclassify-wrteam',
-    storageBucket: 'eclassify-wrteam.appspot.com',
-    androidClientId: '6343732161-dhn3si4lpio5bhr32iu9u6j6d8ja0npr.apps.googleusercontent.com',
-    iosClientId: '6343732161-tutdvlsj06eis0n3eli5c4985fi0lkht.apps.googleusercontent.com',
+    apiKey: 'AIzaSyAyNo9AyzE34U1C97lrkoZMf7-f4cT6gS0',
+    appId: '1:827090007541:ios:8fe011936129dadc191cbc',
+    messagingSenderId: '827090007541',
+    projectId: 'agro-bs-f0273',
+    storageBucket: 'agro-bs-f0273.firebasestorage.app',
+    androidClientId: '827090007541-141hjcjs80nn5ehia9budrpd7c3jmg2b.apps.googleusercontent.com',
+    iosClientId: '827090007541-vo7ac1263abc4rntc377vrirvdafup46.apps.googleusercontent.com',
     iosBundleId: 'com.agrohisha.app',
   );
 

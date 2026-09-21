@@ -106,15 +106,26 @@ class LoginScreenState extends State<LoginScreen> {
               type: MessageType.error);
         } else {
           if (state.error is FirebaseAuthException) {
-            try {
-              HelperUtils.showSnackBarMessage(context,
-                  (state.error as FirebaseAuthException).message!.toString());
-            } catch (e) {}
+            final authEx = state.error as FirebaseAuthException;
+            HelperUtils.showSnackBarMessage(
+              context,
+              authEx.message ?? "Authentication failed. Please try again.",
+              type: MessageType.error,
+            );
+          } else if (state.error is PlatformException) {
+            final platEx = state.error as PlatformException;
+            HelperUtils.showSnackBarMessage(
+              context,
+              platEx.message ?? "Authentication failed. Please try again.",
+              type: MessageType.error,
+            );
           } else {
-            HelperUtils.showSnackBarMessage(context, state.error.toString());
+            HelperUtils.showSnackBarMessage(
+              context,
+              state.error.toString(),
+              type: MessageType.error,
+            );
           }
-          /*HelperUtils.showSnackBarMessage(context, state.error.toString(),
-              type: MessageType.error);*/
         }
       }
       if (state is MSuccess) {

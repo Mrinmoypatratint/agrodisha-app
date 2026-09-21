@@ -58,3 +58,4 @@ __MACOSX/
 
 # Generated files
 *.log
+artifacts_download/

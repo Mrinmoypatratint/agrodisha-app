@@ -29,7 +29,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>app-1-6343732161-ios-5cc58a2dcfbbb66b2b5d40</string>
+				<string>app-1-827090007541-ios-8fe011936129dadc191cbc</string>
 			</array>
 		</dict>
 		<dict>
@@ -37,7 +37,7 @@
         			<string>Editor</string>
         			<key>CFBundleURLSchemes</key>
         			<array>
-        				<string>com.googleusercontent.apps.6343732161-tutdvlsj06eis0n3eli5c4985fi0lkht</string>
+        				<string>com.googleusercontent.apps.827090007541-vo7ac1263abc4rntc377vrirvdafup46</string>
         			</array>
         		</dict>
 	</array>
@@ -53,7 +53,7 @@
 	<string>ca-app-pub-3940256099942544~1458002511</string>
 
 	<key>GIDClientID</key>
-	<string>6343732161-tutdvlsj06eis0n3eli5c4985fi0lkht.apps.googleusercontent.com</string>
+	<string>827090007541-vo7ac1263abc4rntc377vrirvdafup46.apps.googleusercontent.com</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>sms</string>
