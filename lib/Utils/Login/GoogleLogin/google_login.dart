@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:eClassify/Utils/Login/lib/login_status.dart';
 import 'package:eClassify/Utils/Login/lib/login_system.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleLogin extends LoginSystem {
@@ -12,17 +9,15 @@ class GoogleLogin extends LoginSystem {
   static const String _webClientId =
       '827090007541-r6mjb8e5f02abdp5g00e5e24rmpe4ctr.apps.googleusercontent.com';
 
-  late final GoogleSignIn _googleSignIn;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // On Android the serverClientId triggers the idToken being returned.
+    // On iOS the native SDK picks up CLIENT_ID from GoogleService-Info.plist
+    // but still needs serverClientId for the backend idToken.
+    serverClientId: _webClientId,
+  );
 
   @override
-  void init() {
-    _googleSignIn = GoogleSignIn(
-      // On Android the serverClientId triggers the idToken being returned.
-      // On iOS the native SDK picks up CLIENT_ID from GoogleService-Info.plist
-      // but still needs serverClientId for the backend idToken.
-      serverClientId: _webClientId,
-    );
-  }
+  void init() {}
 
   @override
   Future<UserCredential?> login() async {
