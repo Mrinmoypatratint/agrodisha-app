@@ -68,11 +68,11 @@ class DefaultFirebaseOptions {
   // NOTE: For production, register a web app in Firebase Console
   // and replace these values with the actual web app credentials.
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyApCJcVfUTKAdfiNB2vZ399YgJEFy_d-vk',
-    appId: '1:6343732161:web:be9cbc67ef8a19792b5d40',
-    messagingSenderId: '6343732161',
-    projectId: 'eclassify-wrteam',
-    storageBucket: 'eclassify-wrteam.appspot.com',
-    authDomain: 'eclassify-wrteam.firebaseapp.com',
+    apiKey: 'AIzaSyAfnA8I67njl9NAGj_xB9oE-BjKy5gCeMg',
+    appId: '1:827090007541:web:4672694cec89f329191cbc',
+    messagingSenderId: '827090007541',
+    projectId: 'agro-bs-f0273',
+    storageBucket: 'agro-bs-f0273.firebasestorage.app',
+    authDomain: 'agro-bs-f0273.firebaseapp.com',
   );
 }
