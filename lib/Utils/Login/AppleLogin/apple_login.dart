@@ -33,13 +33,15 @@ class AppleLogin extends LoginSystem {
         final UserCredential userCredential =
         await firebaseAuth.signInWithCredential(credential!);
 
-        if (userCredential.additionalUserInfo!.isNewUser) {
+        if (userCredential.additionalUserInfo?.isNewUser ?? false) {
           final String givenName = appleIdCredential.givenName ?? "";
           final String familyName = appleIdCredential.familyName ?? "";
+          final String fullName = "$givenName $familyName".trim();
 
-          await userCredential.user!
-              .updateDisplayName("$givenName $familyName");
-          await userCredential.user!.reload();
+          if (fullName.isNotEmpty) {
+            await userCredential.user!.updateDisplayName(fullName);
+            await userCredential.user!.reload();
+          }
         }
 
         emit(MSuccess());

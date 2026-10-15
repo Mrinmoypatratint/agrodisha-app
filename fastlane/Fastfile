@@ -245,6 +245,7 @@ platform :ios do
       skip_screenshots: true,
       submit_for_review: false,
       run_precheck_before_submit: false,
+      precheck_include_in_app_purchases: false,
       force: true
     )
   end

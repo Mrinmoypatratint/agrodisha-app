@@ -66,13 +66,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app requires access to the camera for adding ads images and user's profile picture.</string>
+	<string>Agrodisha requires access to the camera to allow you to take and upload photos for your ads and profile picture.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app uses location for using map functionality to list your ads.</string>
+	<string>Agrodisha uses your location while using the app to show relevant agricultural products, equipment, and services near you, and to set item location when posting ads.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>We are using microphone to send audio messages in chat functionality</string>
+	<string>Agrodisha requires access to the microphone to allow you to record and send voice messages in chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app requires access to the photo library because we upload profile picture and ads images</string>
+	<string>Agrodisha requires access to the photo library to allow you to select and upload photos for your ads and profile picture.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
@@ -99,8 +99,6 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Your location is required to get current location for add or update item</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
